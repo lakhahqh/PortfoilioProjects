@@ -78,8 +78,7 @@ Order by 1,2
 -- Looking at Total Population and  Vaccinations
 -- Use CTE
 With PopVsVac (continent, location, date, population, new_vaccinations, cumulative_vaccinations)
-as
-(
+as (
 Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
 SUM(CONVERT(bigint, vac.new_vaccinations)) OVER (PARTITION BY dea.location
 												ORDER BY dea.location, dea.date) as cumulative_vaccinations
@@ -87,10 +86,24 @@ From PortfolioProject..CovidDeaths$ dea
 Join PortfolioProject..CovidVaccinations$ vac
 	On dea.date = vac.date
 	and dea.location = vac.location
-Where dea.continent is not null 
-Order by 2,3
+Where dea.continent is not null
+)
+Select *, (cumulative_vaccinations/population)*100
+From PopVsVac
+
+-- Temp Table
+Drop Table if exists #PercentPopulationVaccinated
+Create Table #PercentPopulationVaccinated
+(
+Continent nvarchar(255),
+Location nvarchar(255),
+Date datetime,
+Population numeric,
+new_vaccinations numeric,
+cumulative_vaccinations numeric
 )
 
+Insert into #PercentPopulationVaccinated
 Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
 SUM(CONVERT(bigint, vac.new_vaccinations)) OVER (PARTITION BY dea.location
 												ORDER BY dea.location, dea.date) as cumulative_vaccinations
@@ -98,5 +111,22 @@ From PortfolioProject..CovidDeaths$ dea
 Join PortfolioProject..CovidVaccinations$ vac
 	On dea.date = vac.date
 	and dea.location = vac.location
-Where dea.continent is not null 
-Order by 2,3
+Where dea.continent is not null
+
+Select *, (cumulative_vaccinations/population)*100
+From #PercentPopulationVaccinated
+
+
+-- Creating View to  store data for later visualizations
+Create View PercentPopulationVaccinated as
+Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+SUM(CONVERT(bigint, vac.new_vaccinations)) OVER (PARTITION BY dea.location
+												ORDER BY dea.location, dea.date) as cumulative_vaccinations
+From PortfolioProject..CovidDeaths$ dea
+Join PortfolioProject..CovidVaccinations$ vac
+	On dea.date = vac.date
+	and dea.location = vac.location
+Where dea.continent is not null
+
+Select *
+From PercentPopulationVaccinated
